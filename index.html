@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Солнечная система</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 200px;
+        }
+        #controls {
+            position: absolute;
+            top: 80px;
+            left: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #speed-slider {
+            width: 150px;
+        }
+        #pause-button, #shadow-button {
+            padding: 5px 10px;
+            background: #333;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        #pause-button:hover, #shadow-button:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Кликните на планету для детального осмотра. Повторный клик возвращает к общему виду.</div>
+    <div id="controls">
+        <label for="speed-slider">Скорость вращения: <span id="speed-value">1.0</span></label>
+        <input type="range" id="speed-slider" min="0" max="2" step="0.1" value="1">
+        <button id="pause-button">Пауза</button>
+        <button id="shadow-button">Отключить тени</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Настройка сцены
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Управление камерой
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Освещение
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.01);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 3.0, 100, 2);
+        pointLight.position.set(0, 0, 0);
+        scene.add(pointLight);
+
+        // Звёздный фон
+        const star_geometry = new THREE.BufferGeometry();
+        const star_material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 });
+        const star_vertices = [];
+        for (let i = 0; i < 10000; i++) {
+            const x = (Math.random() - 0.5) * 2000;
+            const y = (Math.random() - 0.5) * 2000;
+            const z = (Math.random() - 0.5) * 2000;
+            star_vertices.push(x, y, z);
+        }
+        star_geometry.setAttribute('position', new THREE.Float32BufferAttribute(star_vertices, 3));
+        const stars = new THREE.Points(star_geometry, star_material);
+        scene.add(stars);
+
+        // Солнце
+        const sun_geometry = new THREE.SphereGeometry(2, 64, 64);
+        const texture_loader = new THREE.TextureLoader();
+        const sun_material = new THREE.MeshBasicMaterial({
+            map: texture_loader.load(
+                'textures/8k_sun.jpg',
+                undefined,
+                undefined,
+                () => {
+                    console.warn('Не удалось загрузить текстуру Солнца');
+                    sun_material.color = new THREE.Color(0xffff00);
+                    sun_material.needsUpdate = true;
+                }
+            ),
+            color: 0xffffff,
+            emissive: 0xff4500,
+            emissiveIntensity: 0.7
+        });
+        const sun = new THREE.Mesh(sun_geometry, sun_material);
+        scene.add(sun);
+
+        // Планеты
+        const planets = [];
+        const planet_data = [
+            {
+                name: "Меркурий",
+                radius: 0.3,
+                distance: 5,
+                speed: 0.02,
+                // color: 0x888888,
+                emissive: 0x000000,
+                texture: 'textures/8k_mercury.jpg',
+                normalMap: 'textures/2k_mercury_bump.jpg',
+                info: "Самая маленькая планета, ближайшая к Солнцу."
+            },
+            {
+                name: "Венера",
+                radius: 0.5,
+                distance: 7,
+                speed: 0.015,
+                // color: 0xffa500,
+                emissive: 0x000000,
+                texture: 'textures/8k_venus_surface.jpg',
+                normalMap: 'textures/2k_venus_bump.jpg',
+                info: "Самая горячая планета с плотной атмосферой."
+            },
+            {
+                name: "Земля",
+                radius: 0.6,
+                distance: 9,
+                speed: 0.01,
+                // color: 0x00ff00,
+                emissive: 0x000000,
+                texture: 'textures/8k_earth_daymap.jpg',
+                normalMap: 'textures/8k_earth_normal.jpg',
+                emissionMap: 'textures/8k_earth_nightmap.jpg',
+                info: "Единственная планета с известной жизнью."
+            },
+            {
+                name: "Марс",
+                radius: 0.4,
+                distance: 11,
+                speed: 0.008,
+                // color: 0xff0000,
+                emissive: 0x000000,
+                texture: 'textures/8k_mars.jpg',
+                normalMap: 'textures/8k_mars_bump.jpg',
+                info: "Красная планета с огромными вулканами."
+            },
+            {
+                name: "Сатурн",
+                radius: 0.7,
+                distance: 14,
+                speed: 0.006,
+                // color: 0xdeb887,
+                emissive: 0x000000,
+                texture: 'textures/8k_saturn.jpg',
+                normalMap: 'textures/8k_saturn_bump.jpg',
+                info: "Газовый гигант с кольцами."
+            }
+        ];
+
+        // Храним нормальные карты для восстановления
+        const normalMaps = {};
+        planet_data.forEach(data => {
+            normalMaps[data.name] = texture_loader.load(
+                data.normalMap,
+                undefined,
+                undefined,
+                () => console.warn(`Не удалось загрузить нормальную карту для ${data.name}`)
+            );
+        });
+
+        planet_data.forEach(data => {
+            const geometry = new THREE.SphereGeometry(data.radius, 64, 64);
+            const material_props = {
+                map: texture_loader.load(
+                    data.texture,
+                    undefined,
+                    undefined,
+                    () => {
+                        console.warn(`Не удалось загрузить текстуру для ${data.name}`);
+                        material_props.map = null;
+                        material_props.color = new THREE.Color(data.color || 0xffffff);
+                        material.needsUpdate = true;
+                    }
+                ),
+                color: 0xffffff,
+                emissive: data.emissive,
+                emissiveIntensity: data.emissionMap ? 0.5 : 0,
+                normalMap: normalMaps[data.name],
+                normalScale: new THREE.Vector2(1, 1),
+                shininess: 30
+            };
+
+            if (data.emissionMap) {
+                material_props.emissiveMap = texture_loader.load(
+                    data.emissionMap,
+                    undefined,
+                    undefined,
+                    () => console.warn(`Не удалось загрузить карту свечения для ${data.name}`)
+                );
+            }
+
+            const material = new THREE.MeshPhongMaterial(material_props);
+            const planet = new THREE.Mesh(geometry, material);
+            planet.position.x = data.distance;
+            planet.userData = { name: data.name, info: data.info };
+            scene.add(planet);
+            planets.push({ mesh: planet, distance: data.distance, speed: data.speed, angle: Math.random() * Math.PI * 2 });
+
+            // Кольца для Сатурна
+            if (data.name === "Сатурн") {
+                const ring_geometry = new THREE.RingGeometry(1, 1.5, 64);
+                const ring_material = new THREE.MeshBasicMaterial({
+                    map: texture_loader.load(
+                        'textures/2k_saturn_ring_alpha.png',
+                        undefined,
+                        undefined,
+                        () => {
+                            console.warn('Не удалось загрузить текстуру колец Сатурна');
+                            ring_material.color = new THREE.Color(0xdeb887);
+                            ring_material.needsUpdate = true;
+                        }
+                    ),
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const ring = new THREE.Mesh(ring_geometry, ring_material);
+                ring.rotation.x = Math.PI / 2;
+                planet.add(ring);
+            }
+        });
+
+        // Позиция камеры
+        camera.position.z = 18;
+
+        // Управление скоростью, паузой, зумом и тенями
+        let speed_multiplier = 1;
+        let is_paused = false;
+        let is_zoomed = false;
+        let zoomed_planet = null;
+        let target_position = new THREE.Vector3(0, 0, 18);
+        let start_position = new THREE.Vector3();
+        let lerp_factor = 0;
+        const zoom_distance = 2;
+
+        const speed_slider = document.getElementById('speed-slider');
+        const speed_value = document.getElementById('speed-value');
+        const pause_button = document.getElementById('pause-button');
+        const shadow_button = document.getElementById('shadow-button');
+
+        speed_slider.addEventListener('input', () => {
+            speed_multiplier = parseFloat(speed_slider.value);
+            speed_value.textContent = speed_multiplier.toFixed(1);
+        });
+
+        pause_button.addEventListener('click', () => {
+            is_paused = !is_paused;
+            pause_button.textContent = is_paused ? 'Возобновить' : 'Пауза';
+        });
+
+        let shadows_enabled = true;
+        shadow_button.addEventListener('click', () => {
+            shadows_enabled = !shadows_enabled;
+            shadow_button.textContent = shadows_enabled ? 'Отключить тени' : 'Включить тени';
+            planets.forEach(planet => {
+                if (shadows_enabled) {
+                    planet.mesh.material.normalMap = normalMaps[planet.mesh.userData.name];
+                    planet.mesh.material.normalScale = new THREE.Vector2(1, 1);
+                } else {
+                    planet.mesh.material.normalMap = null;
+                    planet.mesh.material.normalScale = new THREE.Vector2(0, 0);
+                }
+                planet.mesh.material.needsUpdate = true;
+            });
+        });
+
+        // Обработка кликов
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const info_div = document.getElementById('info');
+
+        window.addEventListener('click', (event) => {
+            if (event.target === pause_button || event.target === speed_slider || event.target === shadow_button) return;
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(planets.map(p => p.mesh));
+            if (intersects.length > 0) {
+                const planet = intersects[0].object;
+                if (is_zoomed && zoomed_planet === planet) {
+                    // Выход из режима зума при повторном клике
+                    is_zoomed = false;
+                    zoomed_planet = null;
+                    lerp_factor = 0;
+                    start_position.copy(camera.position);
+                    controls.target.set(0, 0, 0);
+                    target_position.set(0, 0, 18);
+                    controls.minDistance = 5;
+                    controls.maxDistance = 50;
+                    info_div.textContent = "Кликните на планету для детального осмотра. Повторный клик возвращает к общему виду.";
+                } else {
+                    // Вход в режим зума для выбранной планеты
+                    is_zoomed = true;
+                    zoomed_planet = planet;
+                    lerp_factor = 0;
+                    start_position.copy(camera.position);
+                    controls.target.copy(planet.position);
+                    target_position.copy(planet.position).add(new THREE.Vector3(0, 0, zoom_distance));
+                    controls.minDistance = zoom_distance - 0.5;
+                    controls.maxDistance = zoom_distance + 0.5;
+                    info_div.textContent = `${planet.userData.name}: ${planet.userData.info}`;
+                }
+            } else {
+                if (is_zoomed) {
+                    // Выход из режима зума при клике в пустое пространство
+                    is_zoomed = false;
+                    zoomed_planet = null;
+                    lerp_factor = 0;
+                    start_position.copy(camera.position);
+                    controls.target.set(0, 0, 0);
+                    target_position.set(0, 0, 18);
+                    controls.minDistance = 5;
+                    controls.maxDistance = 50;
+                }
+                info_div.textContent = "Кликните на планету для детального осмотра. Повторный клик возвращает к общему виду.";
+            }
+        });
+
+        // Анимация
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!is_paused) {
+                sun.rotation.y += 0.005 * speed_multiplier;
+                planets.forEach(planet => {
+                    planet.angle += planet.speed * speed_multiplier;
+                    planet.mesh.position.x = Math.cos(planet.angle) * planet.distance;
+                    planet.mesh.position.z = Math.sin(planet.angle) * planet.distance;
+                    planet.mesh.rotation.y += 0.01 * speed_multiplier;
+                });
+            }
+
+            if (is_zoomed && zoomed_planet) {
+                controls.target.copy(zoomed_planet.position);
+                if (lerp_factor < 1) {
+                    lerp_factor += 0.02;
+                    camera.position.lerpVectors(start_position, target_position, lerp_factor);
+                } else {
+                    const offset = camera.position.clone().sub(controls.target);
+                    offset.normalize().multiplyScalar(zoom_distance);
+                    target_position.copy(zoomed_planet.position).add(offset);
+                    camera.position.copy(target_position);
+                }
+            } else {
+                if (lerp_factor < 1) {
+                    lerp_factor += 0.02;
+                    camera.position.lerpVectors(start_position, target_position, lerp_factor);
+                }
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Адаптация к размеру окна
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
