@@ -1,0 +1,54 @@
+<script>
+            // Обработка кликов
+            const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const info_div = document.getElementById('info');
+
+        window.addEventListener('click', (event) => {
+            if (event.target === pause_button || event.target === speed_slider || event.target === shadow_button) return;
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(planets.map(p => p.mesh));
+            if (intersects.length > 0) {
+                const planet = intersects[0].object;
+                if (is_zoomed && zoomed_planet === planet) {
+                    // Выход из режима зума при повторном клике
+                    is_zoomed = false;
+                    zoomed_planet = null;
+                    lerp_factor = 0;
+                    start_position.copy(camera.position);
+                    controls.target.set(0, 0, 0);
+                    target_position.set(0, 0, 18);
+                    controls.minDistance = 5;
+                    controls.maxDistance = 50;
+                    info_div.textContent = "Кликните на планету для детального осмотра. Повторный клик возвращает к общему виду.";
+                } else {
+                    // Вход в режим зума для выбранной планеты
+                    is_zoomed = true;
+                    zoomed_planet = planet;
+                    lerp_factor = 0;
+                    start_position.copy(camera.position);
+                    controls.target.copy(planet.position);
+                    target_position.copy(planet.position).add(new THREE.Vector3(0, 0, zoom_distance));
+                    controls.minDistance = zoom_distance - 0.5;
+                    controls.maxDistance = zoom_distance + 0.5;
+                    info_div.textContent = `${planet.userData.name}: ${planet.userData.info}`;
+                }
+            } else {
+                if (is_zoomed) {
+                    // Выход из режима зума при клике в пустое пространство
+                    is_zoomed = false;
+                    zoomed_planet = null;
+                    lerp_factor = 0;
+                    start_position.copy(camera.position);
+                    controls.target.set(0, 0, 0);
+                    target_position.set(0, 0, 18);
+                    controls.minDistance = 5;
+                    controls.maxDistance = 50;
+                }
+                info_div.textContent = "Кликните на планету для детального осмотра. Повторный клик возвращает к общему виду.";
+            }
+        });
+
+</script>

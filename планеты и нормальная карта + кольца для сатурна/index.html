@@ -1,0 +1,135 @@
+<script>
+            // Планеты
+            const planets = [];
+        const planet_data = [
+            {
+                name: "Меркурий",
+                radius: 0.3,
+                distance: 5,
+                speed: 0.02,
+                // color: 0x888888,
+                emissive: 0x000000,
+                texture: 'textures/8k_mercury.jpg',
+                normalMap: 'textures/2k_mercury_bump.jpg',
+                info: "Самая маленькая планета, ближайшая к Солнцу."
+            },
+            {
+                name: "Венера",
+                radius: 0.5,
+                distance: 7,
+                speed: 0.015,
+                // color: 0xffa500,
+                emissive: 0x000000,
+                texture: 'textures/8k_venus_surface.jpg',
+                normalMap: 'textures/2k_venus_bump.jpg',
+                info: "Самая горячая планета с плотной атмосферой."
+            },
+            {
+                name: "Земля",
+                radius: 0.6,
+                distance: 9,
+                speed: 0.01,
+                // color: 0x00ff00,
+                emissive: 0x000000,
+                texture: 'textures/8k_earth_daymap.jpg',
+                normalMap: 'textures/8k_earth_normal.jpg',
+                emissionMap: 'textures/8k_earth_nightmap.jpg',
+                info: "Единственная планета с известной жизнью."
+            },
+            {
+                name: "Марс",
+                radius: 0.4,
+                distance: 11,
+                speed: 0.008,
+                // color: 0xff0000,
+                emissive: 0x000000,
+                texture: 'textures/8k_mars.jpg',
+                normalMap: 'textures/8k_mars_bump.jpg',
+                info: "Красная планета с огромными вулканами."
+            },
+            {
+                name: "Сатурн",
+                radius: 0.7,
+                distance: 14,
+                speed: 0.006,
+                // color: 0xdeb887,
+                emissive: 0x000000,
+                texture: 'textures/8k_saturn.jpg',
+                normalMap: 'textures/8k_saturn_bump.jpg',
+                info: "Газовый гигант с кольцами."
+            }
+        ];
+
+        // Храним нормальные карты для восстановления
+        const normalMaps = {};
+        planet_data.forEach(data => {
+            normalMaps[data.name] = texture_loader.load(
+                data.normalMap,
+                undefined,
+                undefined,
+                () => console.warn(`Не удалось загрузить нормальную карту для ${data.name}`)
+            );
+        });
+
+        planet_data.forEach(data => {
+            const geometry = new THREE.SphereGeometry(data.radius, 64, 64);
+            const material_props = {
+                map: texture_loader.load(
+                    data.texture,
+                    undefined,
+                    undefined,
+                    () => {
+                        console.warn(`Не удалось загрузить текстуру для ${data.name}`);
+                        material_props.map = null;
+                        material_props.color = new THREE.Color(data.color || 0xffffff);
+                        material.needsUpdate = true;
+                    }
+                ),
+                color: 0xffffff,
+                emissive: data.emissive,
+                emissiveIntensity: data.emissionMap ? 0.5 : 0,
+                normalMap: normalMaps[data.name],
+                normalScale: new THREE.Vector2(1, 1),
+                shininess: 30
+            };
+
+            if (data.emissionMap) {
+                material_props.emissiveMap = texture_loader.load(
+                    data.emissionMap,
+                    undefined,
+                    undefined,
+                    () => console.warn(`Не удалось загрузить карту свечения для ${data.name}`)
+                );
+            }
+
+            const material = new THREE.MeshPhongMaterial(material_props);
+            const planet = new THREE.Mesh(geometry, material);
+            planet.position.x = data.distance;
+            planet.userData = { name: data.name, info: data.info };
+            scene.add(planet);
+            planets.push({ mesh: planet, distance: data.distance, speed: data.speed, angle: Math.random() * Math.PI * 2 });
+
+            // Кольца для Сатурна
+            if (data.name === "Сатурн") {
+                const ring_geometry = new THREE.RingGeometry(1, 1.5, 64);
+                const ring_material = new THREE.MeshBasicMaterial({
+                    map: texture_loader.load(
+                        'textures/2k_saturn_ring_alpha.png',
+                        undefined,
+                        undefined,
+                        () => {
+                            console.warn('Не удалось загрузить текстуру колец Сатурна');
+                            ring_material.color = new THREE.Color(0xdeb887);
+                            ring_material.needsUpdate = true;
+                        }
+                    ),
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const ring = new THREE.Mesh(ring_geometry, ring_material);
+                ring.rotation.x = Math.PI / 2;
+                planet.add(ring);
+            }
+        });
+</script>

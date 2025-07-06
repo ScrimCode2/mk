@@ -1,0 +1,14 @@
+<script>
+    const star_geometry = new THREE.BufferGeometry();
+        const star_material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 });
+        const star_vertices = [];
+        for (let i = 0; i < 10000; i++) {
+            const x = (Math.random() - 0.5) * 2000;
+            const y = (Math.random() - 0.5) * 2000;
+            const z = (Math.random() - 0.5) * 2000;
+            star_vertices.push(x, y, z);
+        }
+        star_geometry.setAttribute('position', new THREE.Float32BufferAttribute(star_vertices, 3));
+        const stars = new THREE.Points(star_geometry, star_material);
+        scene.add(stars);
+</script>

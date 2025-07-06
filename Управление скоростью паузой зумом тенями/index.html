@@ -1,0 +1,42 @@
+<script>
+            let speed_multiplier = 1;
+        let is_paused = false;
+        let is_zoomed = false;
+        let zoomed_planet = null;
+        let target_position = new THREE.Vector3(0, 0, 18);
+        let start_position = new THREE.Vector3();
+        let lerp_factor = 0;
+        const zoom_distance = 2;
+
+        const speed_slider = document.getElementById('speed-slider');
+        const speed_value = document.getElementById('speed-value');
+        const pause_button = document.getElementById('pause-button');
+        const shadow_button = document.getElementById('shadow-button');
+
+        speed_slider.addEventListener('input', () => {
+            speed_multiplier = parseFloat(speed_slider.value);
+            speed_value.textContent = speed_multiplier.toFixed(1);
+        });
+
+        pause_button.addEventListener('click', () => {
+            is_paused = !is_paused;
+            pause_button.textContent = is_paused ? 'Возобновить' : 'Пауза';
+        });
+
+        let shadows_enabled = true;
+        shadow_button.addEventListener('click', () => {
+            shadows_enabled = !shadows_enabled;
+            shadow_button.textContent = shadows_enabled ? 'Отключить тени' : 'Включить тени';
+            planets.forEach(planet => {
+                if (shadows_enabled) {
+                    planet.mesh.material.normalMap = normalMaps[planet.mesh.userData.name];
+                    planet.mesh.material.normalScale = new THREE.Vector2(1, 1);
+                } else {
+                    planet.mesh.material.normalMap = null;
+                    planet.mesh.material.normalScale = new THREE.Vector2(0, 0);
+                }
+                planet.mesh.material.needsUpdate = true;
+            });
+        });
+
+</script>

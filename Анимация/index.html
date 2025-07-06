@@ -1,0 +1,39 @@
+<script>
+            // Анимация
+            function animate() {
+            requestAnimationFrame(animate);
+
+            if (!is_paused) {
+                sun.rotation.y += 0.005 * speed_multiplier;
+                planets.forEach(planet => {
+                    planet.angle += planet.speed * speed_multiplier;
+                    planet.mesh.position.x = Math.cos(planet.angle) * planet.distance;
+                    planet.mesh.position.z = Math.sin(planet.angle) * planet.distance;
+                    planet.mesh.rotation.y += 0.01 * speed_multiplier;
+                });
+            }
+
+            if (is_zoomed && zoomed_planet) {
+                controls.target.copy(zoomed_planet.position);
+                if (lerp_factor < 1) {
+                    lerp_factor += 0.02;
+                    camera.position.lerpVectors(start_position, target_position, lerp_factor);
+                } else {
+                    const offset = camera.position.clone().sub(controls.target);
+                    offset.normalize().multiplyScalar(zoom_distance);
+                    target_position.copy(zoomed_planet.position).add(offset);
+                    camera.position.copy(target_position);
+                }
+            } else {
+                if (lerp_factor < 1) {
+                    lerp_factor += 0.02;
+                    camera.position.lerpVectors(start_position, target_position, lerp_factor);
+                }
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+</script>

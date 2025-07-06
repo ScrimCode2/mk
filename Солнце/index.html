@@ -1,0 +1,21 @@
+<script>
+const sun_geometry = new THREE.SphereGeometry(2, 64, 64);
+        const texture_loader = new THREE.TextureLoader();
+        const sun_material = new THREE.MeshBasicMaterial({
+            map: texture_loader.load(
+                'textures/8k_sun.jpg',
+                undefined,
+                undefined,
+                () => {
+                    console.warn('Не удалось загрузить текстуру Солнца');
+                    sun_material.color = new THREE.Color(0xffff00);
+                    sun_material.needsUpdate = true;
+                }
+            ),
+            color: 0xffffff,
+            emissive: 0xff4500,
+            emissiveIntensity: 0.7
+        });
+        const sun = new THREE.Mesh(sun_geometry, sun_material);
+        scene.add(sun);
+</script>
